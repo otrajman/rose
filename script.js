@@ -89,6 +89,122 @@ class Petal {
     }
 }
 
+class Heart {
+    constructor(index, formationType, centerX, centerY) {
+        this.index = index;
+        this.delay = index * 40; // Stagger by 40ms for faster cascade
+        this.startTime = null;
+        this.phase = 'growing'; // 'growing', 'zooming', 'vanishing', 'done'
+        this.centerX = centerX;
+        this.centerY = centerY;
+
+        // Animation properties
+        this.x = centerX;
+        this.y = centerY;
+        this.scale = 0;
+        this.rotation = 0;
+        this.opacity = 0;
+
+        // Store final formation position for smooth interpolation
+        this.finalFormationX = centerX;
+        this.finalFormationY = centerY;
+
+        // Formation properties
+        this.formationType = formationType;
+        this.calculateFormationPosition(index, formationType);
+    }
+
+    calculateFormationPosition(index, type) {
+        switch(type) {
+            case 0: // Vertical stack - tighter spacing
+                this.targetX = 0;
+                this.targetY = index * 0.2 - 0.4; // Smaller spread
+                break;
+            case 1: // Scattered - tighter clustering
+                const angle = Math.random() * Math.PI * 2;
+                const radius = 0.15 + Math.random() * 0.2; // Smaller radius
+                this.targetX = Math.cos(angle) * radius;
+                this.targetY = Math.sin(angle) * radius;
+                break;
+            case 2: // Spiral - tighter spiral
+                const spiralAngle = index * (Math.PI * 2 / 5) * 1.5;
+                const spiralRadius = index * 0.1; // Smaller spiral
+                this.targetX = Math.cos(spiralAngle) * spiralRadius;
+                this.targetY = Math.sin(spiralAngle) * spiralRadius;
+                break;
+        }
+    }
+
+    update(currentTime, scale) {
+        if (!this.startTime) {
+            this.startTime = currentTime + this.delay;
+        }
+
+        const elapsed = currentTime - this.startTime;
+        if (elapsed < 0) return; // Not started yet due to delay
+
+        // Phase timing - fast grow with immediate zoom transition
+        const growPhaseEnd = 400; // 0.4 seconds
+        const zoomPhaseEnd = 1900; // 1.5 seconds more (total 1.9s)
+        const vanishPhaseEnd = 2900; // 1 second more (total 2.9s)
+
+        if (elapsed < growPhaseEnd) {
+            // Growing phase (0-0.4s): scale 0→1, opacity 0→1, move to formation
+            this.phase = 'growing';
+            const progress = elapsed / growPhaseEnd;
+            const eased = this.easeOutCubic(progress);
+            this.scale = eased;
+            this.opacity = eased;
+            this.x = this.centerX + this.targetX * scale * eased;
+            this.y = this.centerY + this.targetY * scale * eased;
+            this.rotation = eased * Math.PI * 0.12 * (this.index % 2 === 0 ? 1 : -1);
+
+            // Store final formation position at end of grow phase
+            if (progress >= 0.99) {
+                this.finalFormationX = this.x;
+                this.finalFormationY = this.y;
+            }
+        } else if (elapsed < zoomPhaseEnd) {
+            // Zooming phase: scale 1→8, move smoothly to center
+            this.phase = 'zooming';
+            const progress = (elapsed - growPhaseEnd) / (zoomPhaseEnd - growPhaseEnd);
+            const eased = this.easeInOutCubic(progress);
+            this.scale = 1 + eased * 7; // 1 to 8
+            this.opacity = 1;
+            // Smoothly interpolate from stored formation position to center
+            const positionEase = this.easeInCubic(progress);
+            this.x = this.finalFormationX + (this.centerX - this.finalFormationX) * positionEase;
+            this.y = this.finalFormationY + (this.centerY - this.finalFormationY) * positionEase;
+            this.rotation = (Math.PI * 0.12 + eased * Math.PI * 0.25) * (this.index % 2 === 0 ? 1 : -1);
+        } else if (elapsed < vanishPhaseEnd) {
+            // Vanishing phase: scale 8→10, opacity 1→0
+            this.phase = 'vanishing';
+            const progress = (elapsed - zoomPhaseEnd) / (vanishPhaseEnd - zoomPhaseEnd);
+            this.scale = 8 + progress * 2; // 8 to 10
+            this.opacity = 1 - progress;
+            this.x = this.centerX;
+            this.y = this.centerY;
+            this.rotation = (Math.PI * 0.37 + progress * Math.PI * 0.15) * (this.index % 2 === 0 ? 1 : -1);
+        } else {
+            // Done
+            this.phase = 'done';
+            this.opacity = 0;
+        }
+    }
+
+    easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
+    }
+
+    easeInCubic(t) {
+        return t * t * t;
+    }
+
+    easeInOutCubic(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+}
+
 class Rose {
     constructor(canvas) {
         this.canvas = canvas;
@@ -104,15 +220,30 @@ class Rose {
         this.mouseY = this.centerY;
         this.lastTapTime = 0;
         this.bloomPulse = 0;
-        
+
+        // Heart animation properties
+        this.hearts = [];
+        this.isShowingHearts = false;
+        this.hasShownAutoHearts = false;
+        this.heartAnimationStartTime = null;
+
+        // Long-press detection properties
+        this.pressStartTime = null;
+        this.pressStartX = null;
+        this.pressStartY = null;
+        this.longPressThreshold = 600; // milliseconds
+        this.longPressTimer = null;
+
         this.petals = this.createRosePetalStructure();
         this.updatePetalCount();
         
         window.addEventListener('resize', () => this.resize());
         canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
         canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+        canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
         canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
         canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false });
+        canvas.addEventListener('touchend', (e) => this.handleTouchEnd(e), { passive: false });
         
         this.animate();
     }
@@ -127,31 +258,42 @@ class Rose {
     
     createRosePetalStructure() {
         const petals = [];
-        
-        const outerCount = 8;
+
+        // Calculate total petals based on current year
+        const currentYear = new Date().getFullYear();
+        const totalPetals = currentYear - 1995;
+
+        // Distribute petals across 4 layers using proportions from original design
+        // Original: 8 outer (23.5%), 13 middle (38.2%), 8 inner (23.5%), 5 center (14.7%)
+        const outerCount = Math.round(totalPetals * 0.235);
+        const middleCount = Math.round(totalPetals * 0.382);
+        const innerCount = Math.round(totalPetals * 0.235);
+        const centerCount = totalPetals - outerCount - middleCount - innerCount; // Remainder
+
+        // Outer layer
         for (let i = 0; i < outerCount; i++) {
             const angle = (i / outerCount) * Math.PI * 2;
             petals.push(new Petal(angle, 0.15, 1.2, 0, 0.9, 0.3));
         }
-        
-        const middleCount = 13;
+
+        // Middle layer
         for (let i = 0; i < middleCount; i++) {
             const angle = (i / middleCount) * Math.PI * 2 + 0.12;
             petals.push(new Petal(angle, 0.12, 0.95, 1, 0.75, 0.5));
         }
-        
-        const innerCount = 8;
+
+        // Inner layer
         for (let i = 0; i < innerCount; i++) {
             const angle = (i / innerCount) * Math.PI * 2 + 0.2;
             petals.push(new Petal(angle, 0.08, 0.7, 2, 0.6, 0.7));
         }
-        
-        const centerCount = 5;
+
+        // Center layer
         for (let i = 0; i < centerCount; i++) {
             const angle = (i / centerCount) * Math.PI * 2;
             petals.push(new Petal(angle, 0.05, 0.5, 3, 0.5, 0.9));
         }
-        
+
         return petals;
     }
     
@@ -172,9 +314,16 @@ class Rose {
         const rect = this.canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        this.handleTap(x, y);
+        this.handlePressStart(x, y);
     }
-    
+
+    handleMouseUp(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        this.handlePressEnd(x, y);
+    }
+
     handleTouchStart(e) {
         e.preventDefault();
         if (e.touches.length === 1) {
@@ -182,21 +331,35 @@ class Rose {
             const rect = this.canvas.getBoundingClientRect();
             const x = touch.clientX - rect.left;
             const y = touch.clientY - rect.top;
-            this.handleTap(x, y);
+            this.handlePressStart(x, y);
         }
+    }
+
+    handleTouchEnd(e) {
+        e.preventDefault();
+        const rect = this.canvas.getBoundingClientRect();
+        let x, y;
+        if (e.changedTouches.length > 0) {
+            const touch = e.changedTouches[0];
+            x = touch.clientX - rect.left;
+            y = touch.clientY - rect.top;
+        }
+        this.handlePressEnd(x, y);
     }
     
     handleTap(x, y) {
+        if (this.isShowingHearts) return;
+
         const now = Date.now();
         const isDoubleTap = now - this.lastTapTime < 300;
         this.lastTapTime = now;
-        
+
         if (isDoubleTap) {
             this.rebloomAll();
             this.createBloomBurst(this.centerX, this.centerY);
             return;
         }
-        
+
         const tappedPetal = this.findPetalAtPoint(x, y);
         if (tappedPetal && tappedPetal.isActive()) {
             tappedPetal.startFalling(this.centerX, this.centerY, this.scale * this.growthProgress);
@@ -204,6 +367,65 @@ class Rose {
             this.updatePetalCount();
         } else {
             this.createParticles(x, y, 5);
+        }
+    }
+
+    handlePressStart(x, y) {
+        if (this.isShowingHearts) return;
+
+        this.pressStartTime = Date.now();
+        this.pressStartX = x;
+        this.pressStartY = y;
+
+        // Set timer for long press
+        this.longPressTimer = setTimeout(() => {
+            this.checkLongPress(x, y);
+        }, this.longPressThreshold);
+    }
+
+    handlePressEnd(x, y) {
+        // Clear long press timer
+        if (this.longPressTimer) {
+            clearTimeout(this.longPressTimer);
+            this.longPressTimer = null;
+        }
+
+        // If press was short enough, treat as tap
+        if (this.pressStartTime && Date.now() - this.pressStartTime < this.longPressThreshold) {
+            this.handleTap(this.pressStartX, this.pressStartY);
+        }
+
+        this.pressStartTime = null;
+        this.pressStartX = null;
+        this.pressStartY = null;
+    }
+
+    handlePressMove(x, y) {
+        // Cancel long press if user moves too much
+        if (this.pressStartX !== null && this.pressStartY !== null) {
+            const dx = x - this.pressStartX;
+            const dy = y - this.pressStartY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance > 20) {
+                if (this.longPressTimer) {
+                    clearTimeout(this.longPressTimer);
+                    this.longPressTimer = null;
+                }
+            }
+        }
+    }
+
+    checkLongPress(x, y) {
+        // Check if press is on center
+        const dx = x - this.centerX;
+        const dy = y - this.centerY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const centerRadius = this.scale * 0.5;
+
+        if (distance < centerRadius) {
+            // Long press on center - trigger heart animation
+            this.startHeartAnimation();
         }
     }
     
@@ -232,12 +454,15 @@ class Rose {
     }
     
     rebloomAll() {
+        if (this.isShowingHearts) return;
+
         this.petals.forEach(petal => {
             if (petal.isFalling) {
                 petal.startBlooming();
             }
         });
         this.bloomPulse = 1;
+        this.hasShownAutoHearts = false; // Reset to allow hearts to trigger again
         setTimeout(() => this.updatePetalCount(), 100);
     }
     
@@ -248,13 +473,15 @@ class Rose {
             const rect = this.canvas.getBoundingClientRect();
             this.mouseX = touch.clientX - rect.left;
             this.mouseY = touch.clientY - rect.top;
+            this.handlePressMove(this.mouseX, this.mouseY);
         }
     }
-    
+
     handleMouseMove(e) {
         const rect = this.canvas.getBoundingClientRect();
         this.mouseX = e.clientX - rect.left;
         this.mouseY = e.clientY - rect.top;
+        this.handlePressMove(this.mouseX, this.mouseY);
     }
     
     createParticles(x, y, count = 1) {
@@ -525,7 +752,228 @@ class Rose {
         this.ctx.stroke();
         this.ctx.globalAlpha = savedAlpha;
     }
-    
+
+    drawHeartShape(size) {
+        // Draw a proper heart shape with rounded lobes
+        const width = size;
+        const height = size;
+
+        this.ctx.beginPath();
+
+        // Start at the bottom point of the heart
+        this.ctx.moveTo(0, height * 0.35);
+
+        // Left side - curve up and around the left lobe
+        this.ctx.bezierCurveTo(
+            -width * 0.25, height * 0.15,   // control point 1 - inside curve
+            -width * 0.5, height * 0.05,    // control point 2 - outer curve
+            -width * 0.35, -height * 0.15   // end point - outer top of left lobe
+        );
+
+        // Top of left lobe - big rounded curve
+        this.ctx.bezierCurveTo(
+            -width * 0.25, -height * 0.35,  // control point 1 - peak of lobe
+            -width * 0.05, -height * 0.35,  // control point 2 - toward center
+            0, -height * 0.2                // end point - center dip
+        );
+
+        // Top of right lobe - mirror the left
+        this.ctx.bezierCurveTo(
+            width * 0.05, -height * 0.35,   // control point 1 - toward right
+            width * 0.25, -height * 0.35,   // control point 2 - peak of right lobe
+            width * 0.35, -height * 0.15    // end point - outer top of right lobe
+        );
+
+        // Right side - curve down to bottom point
+        this.ctx.bezierCurveTo(
+            width * 0.5, height * 0.05,     // control point 1 - outer curve
+            width * 0.25, height * 0.15,    // control point 2 - inside curve
+            0, height * 0.35                // end point - bottom
+        );
+
+        this.ctx.closePath();
+    }
+
+    drawPencilHeart(size) {
+        const rgb = this.hexToRgb(this.baseColor);
+
+        // Very light base fill
+        this.ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.08)`;
+        this.drawHeartShape(size);
+        this.ctx.fill();
+
+        // Outline with slight sketch variation
+        this.ctx.strokeStyle = this.darken(this.baseColor, 60);
+        this.ctx.lineWidth = 2;
+        this.ctx.lineCap = 'round';
+
+        for (let i = 0; i < 2; i++) {
+            this.ctx.globalAlpha = 0.5 + i * 0.3;
+            this.ctx.save();
+            const offset = (Math.random() - 0.5) * 2;
+            this.ctx.translate(offset, offset);
+            this.drawHeartShape(size);
+            this.ctx.stroke();
+            this.ctx.restore();
+        }
+
+        // Crosshatch shading with clipping
+        const hatchAngle = -Math.PI / 6;
+        const hatchSpacing = 14;
+        const hatchLength = size * 1.4;
+
+        this.ctx.lineWidth = 4;
+        this.ctx.lineCap = 'round';
+
+        // Create clipping region
+        this.ctx.save();
+        this.drawHeartShape(size);
+        this.ctx.clip();
+
+        // Draw hatching lines
+        for (let i = -hatchLength; i < hatchLength; i += hatchSpacing) {
+            const startX = i;
+            const startY = -hatchLength;
+            const endX = i + hatchLength * Math.sin(hatchAngle);
+            const endY = -hatchLength + hatchLength * Math.cos(hatchAngle);
+
+            const distFromCenter = Math.abs(i) / hatchLength;
+            const fadeAlpha = 0.2 + (1 - distFromCenter) * 0.2;
+
+            this.ctx.globalAlpha = fadeAlpha;
+            this.ctx.strokeStyle = this.darken(this.baseColor, 50);
+
+            this.ctx.beginPath();
+            const segments = 4;
+            for (let seg = 0; seg <= segments; seg++) {
+                const t = seg / segments;
+                const x = startX + (endX - startX) * t;
+                const y = startY + (endY - startY) * t;
+                const waveOffset = Math.sin(t * Math.PI * 2) * 2;
+                const xWithWave = x + Math.cos(hatchAngle) * waveOffset;
+                const yWithWave = y + Math.sin(hatchAngle) * waveOffset;
+
+                if (seg === 0) {
+                    this.ctx.moveTo(xWithWave, yWithWave);
+                } else {
+                    this.ctx.lineTo(xWithWave, yWithWave);
+                }
+            }
+            this.ctx.stroke();
+        }
+
+        this.ctx.restore();
+        this.ctx.globalAlpha = 1;
+    }
+
+    drawWatercolorHeart(size) {
+        for (let layer = 0; layer < 6; layer++) {
+            const spread = layer * 3;
+            const alpha = layer === 0 ? 0.25 : (0.18 - layer * 0.02);
+            this.ctx.globalAlpha = alpha;
+
+            const gradient = this.ctx.createRadialGradient(0, -size * 0.2, 0, 0, -size * 0.2, size * 0.8);
+            gradient.addColorStop(0, this.lighten(this.baseColor, 100));
+            gradient.addColorStop(0.4, this.baseColor);
+            gradient.addColorStop(0.85, this.darken(this.baseColor, 20));
+            gradient.addColorStop(1, this.darken(this.baseColor, 40));
+            this.ctx.fillStyle = gradient;
+
+            this.ctx.save();
+            this.ctx.scale(1 + spread * 0.01, 1 + spread * 0.01);
+            this.drawHeartShape(size);
+            this.ctx.fill();
+            this.ctx.restore();
+        }
+        this.ctx.globalAlpha = 1;
+    }
+
+    drawOilHeart(size) {
+        const gradient = this.ctx.createLinearGradient(-size * 0.5, size * 0.3, size * 0.5, -size * 0.5);
+        gradient.addColorStop(0, this.darken(this.baseColor, 40));
+        gradient.addColorStop(0.3, this.baseColor);
+        gradient.addColorStop(0.7, this.lighten(this.baseColor, 40));
+        gradient.addColorStop(1, this.lighten(this.baseColor, 60));
+        this.ctx.fillStyle = gradient;
+
+        this.drawHeartShape(size);
+        this.ctx.fill();
+
+        // Thick impasto highlights
+        const savedAlpha = this.ctx.globalAlpha;
+        this.ctx.strokeStyle = this.lighten(this.baseColor, 80);
+        this.ctx.lineWidth = 5;
+        this.ctx.lineCap = 'round';
+        this.ctx.globalAlpha = savedAlpha * 0.5;
+
+        for (let i = 0; i < 4; i++) {
+            const t = (i + 1) / 5;
+            this.ctx.beginPath();
+            this.ctx.moveTo(-size * 0.2 * (1 - t), -size * t * 0.3);
+            this.ctx.lineTo(size * 0.2 * (1 - t), -size * t * 0.3);
+            this.ctx.stroke();
+        }
+
+        // Bold outline
+        this.ctx.globalAlpha = savedAlpha;
+        this.ctx.strokeStyle = this.darken(this.baseColor, 60);
+        this.ctx.lineWidth = 3;
+        this.drawHeartShape(size);
+        this.ctx.stroke();
+    }
+
+    drawMarkerHeart(size) {
+        // Solid fill
+        this.ctx.fillStyle = this.baseColor;
+        this.drawHeartShape(size);
+        this.ctx.fill();
+
+        // Bold black outline
+        this.ctx.strokeStyle = '#000';
+        this.ctx.lineWidth = 3;
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
+        this.drawHeartShape(size);
+        this.ctx.stroke();
+
+        // Simple highlight streak
+        const savedAlpha = this.ctx.globalAlpha;
+        this.ctx.strokeStyle = this.lighten(this.baseColor, 120);
+        this.ctx.lineWidth = 3;
+        this.ctx.globalAlpha = savedAlpha * 0.8;
+        this.ctx.beginPath();
+        this.ctx.moveTo(-size * 0.15, -size * 0.25);
+        this.ctx.lineTo(-size * 0.05, 0);
+        this.ctx.stroke();
+        this.ctx.globalAlpha = savedAlpha;
+    }
+
+    drawHeart(heart) {
+        this.ctx.save();
+        this.ctx.translate(heart.x, heart.y);
+        this.ctx.rotate(heart.rotation);
+        this.ctx.globalAlpha = heart.opacity;
+
+        const size = this.scale * 0.8 * heart.scale;
+
+        switch(this.style) {
+            case 'pencil':
+                this.drawPencilHeart(size);
+                break;
+            case 'watercolor':
+                this.drawWatercolorHeart(size);
+                break;
+            case 'oil':
+                this.drawOilHeart(size);
+                break;
+            case 'marker':
+                this.drawMarkerHeart(size);
+                break;
+        }
+
+        this.ctx.restore();
+    }
+
     drawStem() {
         const stemHeight = this.scale * 2.8;
         const stemWidth = this.scale * 0.15;
@@ -654,7 +1102,40 @@ class Rose {
         
         this.ctx.globalAlpha = 1;
     }
-    
+
+    startHeartAnimation() {
+        this.isShowingHearts = true;
+        this.hearts = [];
+        this.heartAnimationStartTime = Date.now();
+
+        // Randomly select formation type: 0=vertical stack, 1=scattered, 2=spiral
+        const formationType = Math.floor(Math.random() * 3);
+
+        // Create 5 hearts with 40ms staggered timing for smooth, fast cascade
+        for (let i = 0; i < 5; i++) {
+            this.hearts.push(new Heart(i, formationType, this.centerX, this.centerY));
+        }
+    }
+
+    updateHearts() {
+        if (this.hearts.length === 0) return;
+
+        const currentTime = Date.now();
+
+        // Update all hearts
+        this.hearts.forEach(heart => {
+            heart.update(currentTime, this.scale);
+        });
+
+        // Check if all hearts are done
+        const allDone = this.hearts.every(h => h.phase === 'done');
+        if (allDone) {
+            this.isShowingHearts = false;
+            this.hearts = [];
+            this.heartAnimationStartTime = null;
+        }
+    }
+
     animate() {
         const bgGradient = this.ctx.createRadialGradient(
             this.centerX, this.centerY, 0,
@@ -707,9 +1188,18 @@ class Rose {
                 this.drawRosePetal(x, y, petalSize, petalAngle, petal, this.style, opacity);
             }
         });
-        
+
+        // Check if all petals have fallen
+        if (!this.isShowingHearts && !this.hasShownAutoHearts && this.growthProgress >= 1) {
+            const allFallen = this.petals.every(p => p.isFalling);
+            if (allFallen) {
+                this.hasShownAutoHearts = true;
+                this.startHeartAnimation();
+            }
+        }
+
         this.ctx.globalAlpha = 1;
-        
+
         const centerSize = this.scale * 0.3 * this.growthProgress * (1 + this.bloomPulse * 0.3);
         const centerGradient = this.ctx.createRadialGradient(this.centerX, this.centerY, 0, this.centerX, this.centerY, centerSize);
         centerGradient.addColorStop(0, '#ffd700');
@@ -737,14 +1227,22 @@ class Rose {
             this.ctx.arc(x, y, 2, 0, Math.PI * 2);
             this.ctx.fill();
         }
-        
+
+        // Update and draw hearts if animation is active
+        if (this.isShowingHearts) {
+            this.updateHearts();
+            this.hearts.forEach(heart => this.drawHeart(heart));
+        }
+
         this.updateParticles();
         requestAnimationFrame(() => this.animate());
     }
     
     setStyle(style) {
         this.style = style;
-        this.createBloomBurst(this.centerX, this.centerY);
+        if (!this.isShowingHearts) {
+            this.createBloomBurst(this.centerX, this.centerY);
+        }
     }
     
     setColor(color) {
