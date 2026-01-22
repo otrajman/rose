@@ -1,0 +1,268 @@
+ * {
+     margin: 0;
+     padding: 0;
+     box-sizing: border-box;
+     -webkit-tap-highlight-color: transparent;
+ }
+ 
+ body {
+     font-family: 'Georgia', serif;
+     overflow: hidden;
+     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+     color: #fff;
+     touch-action: none;
+ }
+ 
+ .container {
+     width: 100vw;
+     height: 100vh;
+     position: relative;
+     display: flex;
+     flex-direction: column;
+ }
+ 
+ .header {
+     position: absolute;
+     top: 20px;
+     left: 50%;
+     width: 100%;
+     transform: translateX(-50%);
+     text-align: center;
+     z-index: 10;
+     animation: fadeInDown 1s ease both;
+ }
+ 
+ .title {
+     font-size: 2.5em;
+     font-weight: 700;
+     background: linear-gradient(45deg, #ff6b6b, #ffd93d, #ff6b6b);
+     background-size: 200% 200%;
+     -webkit-background-clip: text;
+     -webkit-text-fill-color: transparent;
+     background-clip: text;
+     animation: gradientShift 3s ease infinite;
+     margin-bottom: 8px;
+     text-shadow: 0 0 30px rgba(255, 107, 107, 0.5);
+ }
+ 
+ .subtitle {
+     font-size: 0.9em;
+     opacity: 0.8;
+     color: #ffd93d;
+     margin-bottom: 10px;
+ }
+ 
+ .petal-counter {
+     font-size: 1.1em;
+     color: #fff;
+     background: rgba(0, 0, 0, 0.4);
+     padding: 8px 20px;
+     border-radius: 20px;
+     display: inline-block;
+     backdrop-filter: blur(10px);
+     border: 1px solid rgba(255, 255, 255, 0.2);
+ }
+ 
+ #petalCount {
+     font-weight: 700;
+     font-size: 1.3em;
+     color: #ff6b6b;
+ }
+ 
+ #roseCanvas {
+     position: absolute;
+     top: 0;
+     left: 0;
+     width: 100%;
+     height: 100%;
+     cursor: pointer;
+     touch-action: none;
+ }
+ 
+ .controls {
+     position: absolute;
+     bottom: 20px;
+     left: 50%;
+     transform: translateX(-50%);
+     z-index: 10;
+     background: rgba(0, 0, 0, 0.7);
+     backdrop-filter: blur(10px);
+     padding: 15px;
+     border-radius: 20px;
+     border: 1px solid rgba(255, 255, 255, 0.1);
+     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+     max-width: 95vw;
+     animation: fadeInUp 1s ease 0.5s both;
+ }
+ 
+ .style-buttons {
+     display: grid;
+     grid-template-columns: repeat(4, 1fr);
+     gap: 8px;
+     margin-bottom: 12px;
+ }
+ 
+ .style-btn {
+     background: rgba(255, 255, 255, 0.1);
+     border: 2px solid rgba(255, 255, 255, 0.2);
+     color: #fff;
+     padding: 12px 8px;
+     border-radius: 12px;
+     cursor: pointer;
+     font-size: 13px;
+     font-weight: 600;
+     transition: all 0.3s ease;
+     backdrop-filter: blur(5px);
+     touch-action: manipulation;
+ }
+ 
+ .style-btn:active {
+     transform: scale(0.95);
+ }
+ 
+ .style-btn.active {
+     background: rgba(220, 20, 60, 0.6);
+     border-color: #dc143c;
+     box-shadow: 0 0 20px rgba(220, 20, 60, 0.5);
+ }
+ 
+ .color-picker-container {
+     display: flex;
+     align-items: center;
+     gap: 8px;
+     justify-content: center;
+     flex-wrap: wrap;
+ }
+ 
+ .color-picker-container label {
+     font-weight: 600;
+     font-size: 14px;
+ }
+ 
+ #colorPicker {
+     width: 50px;
+     height: 40px;
+     border: none;
+     border-radius: 8px;
+     cursor: pointer;
+     background: transparent;
+ }
+ 
+ .preset-colors {
+     display: flex;
+     gap: 6px;
+     flex-wrap: wrap;
+ }
+ 
+ .color-preset {
+     width: 40px;
+     height: 40px;
+     border-radius: 50%;
+     cursor: pointer;
+     border: 3px solid rgba(255, 255, 255, 0.3);
+     transition: all 0.3s ease;
+     touch-action: manipulation;
+ }
+ 
+ .color-preset:active {
+     transform: scale(0.9);
+ }
+ 
+ @keyframes fadeInDown {
+     from {
+         opacity: 0;
+         transform: translateX(-50%) translateY(-30px);
+     }
+     to {
+         opacity: 1;
+         transform: translateX(-50%) translateY(0);
+     }
+ }
+ 
+ @keyframes fadeInUp {
+     from {
+         opacity: 0;
+         transform: translateX(-50%) translateY(30px);
+     }
+     to {
+         opacity: 1;
+         transform: translateX(-50%) translateY(0);
+     }
+ }
+ 
+ @keyframes gradientShift {
+     0%, 100% { background-position: 0% 50%; }
+     50% { background-position: 100% 50%; }
+ }
+ 
+ @media (max-width: 768px) {
+     .title {
+         font-size: 2em;
+     }
+     
+     .subtitle {
+         font-size: 0.8em;
+     }
+     
+     .petal-counter {
+         font-size: 0.9em;
+         padding: 6px 16px;
+     }
+     
+     #petalCount {
+         font-size: 1.2em;
+     }
+     
+     .controls {
+         padding: 12px;
+         bottom: 80px;
+         left: 50%;
+         transform: translateX(-50%);
+         width: 90%;
+         max-width: 90%;
+     }
+     
+     .style-btn {
+         padding: 10px 4px;
+         font-size: 11px;
+     }
+ }
+ 
+ @media (max-width: 480px) {
+     .title {
+         font-size: 1.6em;
+     }
+     
+     .subtitle {
+         font-size: 0.75em;
+     }
+     
+     .controls {
+         bottom: 60px;
+         width: 95%;
+         max-width: 95%;
+         padding: 10px;
+     }
+     
+     .style-btn {
+         padding: 8px 3px;
+         font-size: 10px;
+     }
+     
+     .color-picker-container {
+         gap: 4px;
+     }
+     
+     .color-picker-container label {
+         font-size: 12px;
+     }
+     
+     .preset-colors {
+         gap: 4px;
+     }
+     
+     .color-preset {
+         width: 35px;
+         height: 35px;
+     }
+ }

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Rose For You 🌹</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">For My Love 💕</h1>
+            <p class="subtitle">Tap petals to pick • Double tap to re-bloom</p>
+            <div class="petal-counter">
+                <span id="petalCount">34</span> petals remaining
+            </div>
+        </div>
+        
+        <canvas id="roseCanvas"></canvas>
+        
+        <div class="controls">
+            <div class="style-buttons">
+                <button class="style-btn" data-style="pencil">✏️ Pencil</button>
+                <button class="style-btn active" data-style="watercolor">🎨 Watercolor</button>
+                <button class="style-btn" data-style="oil">🖌️ Oil</button>
+                <button class="style-btn" data-style="marker">🖊️ Marker</button>
+            </div>
+            
+            <div class="color-picker-container">
+                <label for="colorPicker">Color:</label>
+                <input type="color" id="colorPicker" value="#dc143c">
+                <div class="preset-colors">
+                    <button class="color-preset" data-color="#dc143c" style="background: #dc143c" title="Classic Red"></button>
+                    <button class="color-preset" data-color="#ff69b4" style="background: #ff69b4" title="Hot Pink"></button>
+                    <button class="color-preset" data-color="#ffd700" style="background: #ffd700" title="Gold"></button>
+                    <button class="color-preset" data-color="#9370db" style="background: #9370db" title="Purple"></button>
+                    <button class="color-preset" data-color="#ffffff" style="background: #ffffff; border: 2px solid #666" title="White"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
