@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Rose petals -->
+  <g>
+    <!-- Center -->
+    <circle cx="32" cy="28" r="6" fill="#dc143c"/>
+
+    <!-- Inner petals -->
+    <ellipse cx="32" cy="22" rx="8" ry="10" fill="#ff1744" opacity="0.9"/>
+    <ellipse cx="38" cy="28" rx="10" ry="8" fill="#ff1744" opacity="0.9"/>
+    <ellipse cx="32" cy="34" rx="8" ry="10" fill="#ff1744" opacity="0.9"/>
+    <ellipse cx="26" cy="28" rx="10" ry="8" fill="#ff1744" opacity="0.9"/>
+
+    <!-- Outer petals -->
+    <ellipse cx="32" cy="16" rx="10" ry="12" fill="#ff4569" opacity="0.8"/>
+    <ellipse cx="43" cy="24" rx="12" ry="10" fill="#ff4569" opacity="0.8"/>
+    <ellipse cx="43" cy="32" rx="12" ry="10" fill="#ff4569" opacity="0.8"/>
+    <ellipse cx="32" cy="40" rx="10" ry="12" fill="#ff4569" opacity="0.8"/>
+    <ellipse cx="21" cy="32" rx="12" ry="10" fill="#ff4569" opacity="0.8"/>
+    <ellipse cx="21" cy="24" rx="12" ry="10" fill="#ff4569" opacity="0.8"/>
+  </g>
+
+  <!-- Stem -->
+  <rect x="30" y="38" width="4" height="20" fill="#2e7d32" rx="2"/>
+
+  <!-- Leaves -->
+  <ellipse cx="25" cy="48" rx="6" ry="4" fill="#43a047" transform="rotate(-45 25 48)"/>
+  <ellipse cx="39" cy="52" rx="6" ry="4" fill="#43a047" transform="rotate(45 39 52)"/>
+</svg>
