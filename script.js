@@ -121,7 +121,7 @@ class Rose {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
         this.centerX = this.canvas.width / 2;
-        this.centerY = this.canvas.height / 2.2;
+        this.centerY = this.canvas.height / 2.4;
         this.scale = Math.min(this.canvas.width, this.canvas.height) / 4.5;
     }
     
@@ -344,8 +344,9 @@ class Rose {
     
     drawPencilRosePetal(width, height, curl) {
         const rgb = this.hexToRgb(this.baseColor);
-        this.ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`;
-        
+
+        // Very light base fill
+        this.ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.08)`;
         this.ctx.beginPath();
         this.ctx.moveTo(-width * 0.5, height * 0.1);
         this.ctx.lineTo(width * 0.5, height * 0.1);
@@ -353,13 +354,16 @@ class Rose {
         this.ctx.quadraticCurveTo(0, -height * (1 - curl * 0.2), -width * 0.1, -height * (1 - curl * 0.3));
         this.ctx.bezierCurveTo(-width * 0.4, -height * 0.8, -width * 0.6, -height * 0.3, -width * 0.5, height * 0.1);
         this.ctx.fill();
-        
+
+        // Outline with slight sketch variation
         this.ctx.strokeStyle = this.darken(this.baseColor, 60);
-        this.ctx.lineWidth = 2;
-        
+        this.ctx.lineWidth = 1.5;
+        this.ctx.lineCap = 'round';
+
         for (let i = 0; i < 2; i++) {
+            this.ctx.globalAlpha = 0.5 + i * 0.3;
             this.ctx.beginPath();
-            const offset = (Math.random() - 0.5) * 1;
+            const offset = (Math.random() - 0.5) * 1.5;
             this.ctx.moveTo(-width * 0.5, height * 0.1);
             this.ctx.lineTo(width * 0.5, height * 0.1);
             this.ctx.bezierCurveTo(width * 0.6 + offset, -height * 0.3, width * 0.4 + offset, -height * 0.8, width * 0.1, -height * (1 - curl * 0.3));
@@ -367,24 +371,63 @@ class Rose {
             this.ctx.bezierCurveTo(-width * 0.4 + offset, -height * 0.8, -width * 0.6 + offset, -height * 0.3, -width * 0.5, height * 0.1);
             this.ctx.stroke();
         }
-        
-        this.ctx.globalAlpha *= 0.4;
-        this.ctx.lineWidth = 1;
-        
-        for (let i = 0; i < 12; i++) {
+
+        // Classic pencil hatching at 45-degree angle with back-and-forth lines
+        const hatchAngle = -Math.PI / 6; // ~30 degrees
+        const hatchSpacing = 14; // Increased spacing for fewer lines
+        const hatchLength = Math.max(width, height) * 1.4;
+
+        this.ctx.lineWidth = 4;
+        this.ctx.lineCap = 'round';
+
+        // Create clipping region for the petal shape
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.moveTo(-width * 0.5, height * 0.1);
+        this.ctx.lineTo(width * 0.5, height * 0.1);
+        this.ctx.bezierCurveTo(width * 0.6, -height * 0.3, width * 0.4, -height * 0.8, width * 0.1, -height * (1 - curl * 0.3));
+        this.ctx.quadraticCurveTo(0, -height * (1 - curl * 0.2), -width * 0.1, -height * (1 - curl * 0.3));
+        this.ctx.bezierCurveTo(-width * 0.4, -height * 0.8, -width * 0.6, -height * 0.3, -width * 0.5, height * 0.1);
+        this.ctx.clip();
+
+        // Back-and-forth hatching lines with fade
+        for (let i = -hatchLength; i < hatchLength; i += hatchSpacing) {
+            const startX = i;
+            const startY = -hatchLength;
+            const endX = i + hatchLength * Math.sin(hatchAngle);
+            const endY = -hatchLength + hatchLength * Math.cos(hatchAngle);
+
+            // Calculate distance from petal edge for fading effect
+            const distFromCenter = Math.abs(i) / hatchLength;
+            const fadeAlpha = 0.2 + (1 - distFromCenter) * 0.2;
+
+            this.ctx.globalAlpha = fadeAlpha;
+            this.ctx.strokeStyle = this.darken(this.baseColor, 50);
+
+            // Draw back-and-forth line with slight waviness
             this.ctx.beginPath();
-            this.ctx.moveTo(-width * 0.4 + i * (width * 0.8 / 12), height * 0.1);
-            this.ctx.lineTo(-width * 0.4 + i * (width * 0.8 / 12) + width * 0.2, -height * 0.8);
+            const segments = 4; // Reduced segments for simpler lines
+            for (let seg = 0; seg <= segments; seg++) {
+                const t = seg / segments;
+                const x = startX + (endX - startX) * t;
+                const y = startY + (endY - startY) * t;
+
+                // Add slight wave/variation to the line
+                const waveOffset = Math.sin(t * Math.PI * 2) * 2;
+                const xWithWave = x + Math.cos(hatchAngle) * waveOffset;
+                const yWithWave = y + Math.sin(hatchAngle) * waveOffset;
+
+                if (seg === 0) {
+                    this.ctx.moveTo(xWithWave, yWithWave);
+                } else {
+                    this.ctx.lineTo(xWithWave, yWithWave);
+                }
+            }
             this.ctx.stroke();
         }
-        
-        this.ctx.globalAlpha *= 0.8;
-        for (let i = 0; i < 8; i++) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(-width * 0.3 * (1 - i / 8), height * 0.1 - height * (i / 8));
-            this.ctx.lineTo(width * 0.3 * (1 - i / 8), height * 0.1 - height * (i / 8));
-            this.ctx.stroke();
-        }
+
+        this.ctx.restore();
+        this.ctx.globalAlpha = 1;
     }
     
     drawWatercolorRosePetal(width, height, curl) {
@@ -526,15 +569,18 @@ class Rose {
             this.ctx.moveTo(0, 0);
             this.ctx.quadraticCurveTo(-stemWidth * 2, stemHeight / 2, 0, stemHeight);
             this.ctx.stroke();
-            
-            this.ctx.strokeStyle = '#4a7c2c';
-            this.ctx.lineWidth = stemWidth / 3;
-            this.ctx.globalAlpha = 0.6;
-            this.ctx.beginPath();
-            this.ctx.moveTo(stemWidth / 4, stemHeight * 0.2);
-            this.ctx.lineTo(stemWidth / 4, stemHeight * 0.8);
-            this.ctx.stroke();
-            this.ctx.globalAlpha = 1;
+
+            // Only add highlight for oil style, not pencil
+            if (this.style !== 'pencil') {
+                this.ctx.strokeStyle = '#4a7c2c';
+                this.ctx.lineWidth = stemWidth / 3;
+                this.ctx.globalAlpha = 0.6;
+                this.ctx.beginPath();
+                this.ctx.moveTo(stemWidth / 4, stemHeight * 0.2);
+                this.ctx.lineTo(stemWidth / 4, stemHeight * 0.8);
+                this.ctx.stroke();
+                this.ctx.globalAlpha = 1;
+            }
         }
         
         this.drawLeaf(-this.scale * 0.9, stemHeight * 0.35, -0.5);
