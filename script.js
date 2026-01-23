@@ -157,7 +157,7 @@ class Heart {
             this.opacity = eased;
             this.x = this.centerX + this.targetX * scale * eased;
             this.y = this.centerY + this.targetY * scale * eased;
-            this.rotation = eased * Math.PI * 0.12 * (this.index % 2 === 0 ? 1 : -1);
+            this.rotation = eased * Math.PI * 0.12; // All hearts face same direction
 
             // Store final formation position at end of grow phase
             if (progress >= 0.99) {
@@ -175,7 +175,7 @@ class Heart {
             const positionEase = this.easeInCubic(progress);
             this.x = this.finalFormationX + (this.centerX - this.finalFormationX) * positionEase;
             this.y = this.finalFormationY + (this.centerY - this.finalFormationY) * positionEase;
-            this.rotation = (Math.PI * 0.12 + eased * Math.PI * 0.25) * (this.index % 2 === 0 ? 1 : -1);
+            this.rotation = Math.PI * 0.12 + eased * Math.PI * 0.25; // All hearts face same direction
         } else if (elapsed < vanishPhaseEnd) {
             // Vanishing phase: scale 8→10, opacity 1→0
             this.phase = 'vanishing';
@@ -184,7 +184,7 @@ class Heart {
             this.opacity = 1 - progress;
             this.x = this.centerX;
             this.y = this.centerY;
-            this.rotation = (Math.PI * 0.37 + progress * Math.PI * 0.15) * (this.index % 2 === 0 ? 1 : -1);
+            this.rotation = Math.PI * 0.37 + progress * Math.PI * 0.15; // All hearts face same direction
         } else {
             // Done
             this.phase = 'done';
@@ -572,8 +572,8 @@ class Rose {
     drawPencilRosePetal(width, height, curl) {
         const rgb = this.hexToRgb(this.baseColor);
 
-        // Very light base fill
-        this.ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.08)`;
+        // Light base fill - increased opacity to fill in the petal
+        this.ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)`;
         this.ctx.beginPath();
         this.ctx.moveTo(-width * 0.5, height * 0.1);
         this.ctx.lineTo(width * 0.5, height * 0.1);
@@ -1031,8 +1031,8 @@ class Rose {
             }
         }
         
-        this.drawLeaf(-this.scale * 0.9, stemHeight * 0.35, -0.5);
-        this.drawLeaf(this.scale * 0.7, stemHeight * 0.65, 0.3);
+        this.drawLeaf(-this.scale * 0.6, stemHeight * 0.35, -0.5);
+        this.drawLeaf(this.scale * 0.3, stemHeight * 0.65, 0.3);
         
         this.ctx.restore();
     }
@@ -1108,8 +1108,8 @@ class Rose {
         this.hearts = [];
         this.heartAnimationStartTime = Date.now();
 
-        // Randomly select formation type: 0=vertical stack, 1=scattered, 2=spiral
-        const formationType = Math.floor(Math.random() * 3);
+        // Use vertical stack formation (type 0) for better heart visibility
+        const formationType = 0;
 
         // Create 5 hearts with 40ms staggered timing for smooth, fast cascade
         for (let i = 0; i < 5; i++) {
@@ -1136,17 +1136,93 @@ class Rose {
         }
     }
 
-    animate() {
-        const bgGradient = this.ctx.createRadialGradient(
-            this.centerX, this.centerY, 0,
-            this.centerX, this.centerY, Math.max(this.canvas.width, this.canvas.height)
-        );
-        bgGradient.addColorStop(0, '#1a1a2e');
-        bgGradient.addColorStop(0.5, '#16213e');
-        bgGradient.addColorStop(1, '#0f3460');
-        this.ctx.fillStyle = bgGradient;
+    drawCloud(x, y, size) {
+        this.ctx.save();
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+
+        // Cloud made of overlapping circles
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, size, 0, Math.PI * 2);
+        this.ctx.arc(x - size * 0.7, y, size * 0.7, 0, Math.PI * 2);
+        this.ctx.arc(x + size * 0.7, y, size * 0.7, 0, Math.PI * 2);
+        this.ctx.arc(x - size * 0.3, y - size * 0.5, size * 0.6, 0, Math.PI * 2);
+        this.ctx.arc(x + size * 0.3, y - size * 0.5, size * 0.6, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        this.ctx.restore();
+    }
+
+    drawBackground() {
+        // Sky gradient - light blue at top, lighter at horizon
+        const skyGradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+        skyGradient.addColorStop(0, '#87CEEB');
+        skyGradient.addColorStop(0.6, '#B0E0E6');
+        skyGradient.addColorStop(1, '#E0F6FF');
+        this.ctx.fillStyle = skyGradient;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        
+
+        // Draw clouds
+        const time = Date.now() * 0.0001; // Slow drift
+        this.drawCloud(this.canvas.width * 0.15 + Math.sin(time) * 20, this.canvas.height * 0.15, 40);
+        this.drawCloud(this.canvas.width * 0.75 + Math.sin(time + 1) * 25, this.canvas.height * 0.2, 50);
+        this.drawCloud(this.canvas.width * 0.45 + Math.sin(time + 2) * 15, this.canvas.height * 0.1, 35);
+        this.drawCloud(this.canvas.width * 0.85 + Math.sin(time + 3) * 30, this.canvas.height * 0.25, 45);
+
+        // Distant hills (background layer)
+        this.ctx.fillStyle = '#7CB342';
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, this.canvas.height * 0.5);
+        this.ctx.quadraticCurveTo(
+            this.canvas.width * 0.3, this.canvas.height * 0.35,
+            this.canvas.width * 0.6, this.canvas.height * 0.45
+        );
+        this.ctx.quadraticCurveTo(
+            this.canvas.width * 0.8, this.canvas.height * 0.5,
+            this.canvas.width, this.canvas.height * 0.48
+        );
+        this.ctx.lineTo(this.canvas.width, this.canvas.height);
+        this.ctx.lineTo(0, this.canvas.height);
+        this.ctx.fill();
+
+        // Main grassy hill (foreground)
+        const grassGradient = this.ctx.createLinearGradient(0, this.canvas.height * 0.5, 0, this.canvas.height);
+        grassGradient.addColorStop(0, '#8BC34A');
+        grassGradient.addColorStop(1, '#689F38');
+        this.ctx.fillStyle = grassGradient;
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, this.canvas.height * 0.6);
+        this.ctx.quadraticCurveTo(
+            this.canvas.width * 0.25, this.canvas.height * 0.5,
+            this.canvas.width * 0.5, this.canvas.height * 0.55
+        );
+        this.ctx.quadraticCurveTo(
+            this.canvas.width * 0.75, this.canvas.height * 0.6,
+            this.canvas.width, this.canvas.height * 0.58
+        );
+        this.ctx.lineTo(this.canvas.width, this.canvas.height);
+        this.ctx.lineTo(0, this.canvas.height);
+        this.ctx.fill();
+
+        // Add some grass texture with simple lines
+        this.ctx.strokeStyle = 'rgba(104, 159, 56, 0.3)';
+        this.ctx.lineWidth = 2;
+        this.ctx.lineCap = 'round';
+        for (let i = 0; i < 50; i++) {
+            const x = Math.random() * this.canvas.width;
+            const y = this.canvas.height * 0.6 + Math.random() * this.canvas.height * 0.4;
+            const height = 10 + Math.random() * 15;
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, y);
+            this.ctx.lineTo(x + (Math.random() - 0.5) * 5, y - height);
+            this.ctx.stroke();
+        }
+    }
+
+    animate() {
+        // Draw scenic background with sky, clouds, and grassy hills
+        this.drawBackground();
+
         if (this.growthProgress < this.targetGrowth) {
             this.growthProgress += 0.01;
         }

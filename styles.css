@@ -35,27 +35,28 @@
  .title {
      font-size: 2.5em;
      font-weight: 700;
-     background: linear-gradient(45deg, #ff6b6b, #ffd93d, #ff6b6b);
+     background: linear-gradient(45deg, #c41e3a, #2d5016, #c41e3a);
      background-size: 200% 200%;
      -webkit-background-clip: text;
      -webkit-text-fill-color: transparent;
      background-clip: text;
      animation: gradientShift 3s ease infinite;
      margin-bottom: 8px;
-     text-shadow: 0 0 30px rgba(255, 107, 107, 0.5);
+     text-shadow: 0 0 30px rgba(196, 30, 58, 0.3);
  }
  
  .subtitle {
      font-size: 0.9em;
      opacity: 0.8;
-     color: #ffd93d;
+     color: darkgreen;
      margin-bottom: 10px;
+     font-weight: bold;
  }
  
  .petal-counter {
      font-size: 1.1em;
      color: #fff;
-     background: rgba(0, 0, 0, 0.4);
+     background: rgba(0, 0, 0, 0.5);
      padding: 8px 20px;
      border-radius: 20px;
      display: inline-block;
